@@ -1,11 +1,10 @@
-name: Grocery‑Daily‑21h
+name: Grocery‑Daily‑22h30
 
 on:
-  # ────────────────  21:00 local  ────────────────
-  # Replace UTC‑offset below with *your* offset.
-  # Example: Eastern Time  (UTC‑4 / ‑5)  →  01:00 UTC
+  # ────────────────  22:30 local  ────────────────
+  # Local 22:30  (UTC‑4)  ➜  02:30 UTC  next day
   schedule:
-    - cron: '0 1 * * *'          # 01:00 UTC = 21:00 EDT / 20:00 EST
+    - cron: '30 2 * * *'         # 02:30 UTC = 22:30 EDT / 21:30 EST
   workflow_dispatch:             # manual “Run workflow” button
 
 jobs:
