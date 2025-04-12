@@ -1,0 +1,17 @@
+name: Grocery‑Daily‑21h
+
+on:
+  # ────────────────  21:00 local  ────────────────
+  # Replace UTC‑offset below with *your* offset.
+  # Example: Eastern Time  (UTC‑4 / ‑5)  →  01:00 UTC
+  schedule:
+    - cron: '0 1 * * *'          # 01:00 UTC = 21:00 EDT / 20:00 EST
+  workflow_dispatch:             # manual “Run workflow” button
+
+jobs:
+  call_script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Apps‑Script Web‑App
+        run: |
+          curl -sSL "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=grocery"
