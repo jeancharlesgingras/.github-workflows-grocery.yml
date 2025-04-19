@@ -1,22 +1,24 @@
 name: OnDemand‑21‑Categories
 
 on:
+  # === 00:00 LOCAL (edit to your UTC offset) =================
+  # Eastern (UTC‑4)   → 04:00 UTC
+  # Central (UTC‑5)   → 05:00 UTC
+  # Mountain (UTC‑6)  → 06:00 UTC
+  # Pacific (UTC‑7)   → 07:00 UTC
   schedule:
-    # 04:00 UTC  = 00:00 EDT  / 23:00 EST  / 21:00 PDT
-    - cron: '0 4 * * *'
+    - cron: '0 4 * * *'          # <‑‑ midnight Eastern
   workflow_dispatch:
 
 jobs:
   run_all:
     runs-on: ubuntu-latest
     steps:
-      # ---------- midnight wipe ----------
       - name: Clear sheet at midnight
         run: |
           curl -sSL "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=clear"
 
-      # ---------- 21 categories ----------
-      - name: Loop through categories every 20 min
+      - name: Loop through 21 categories every 20 min
         run: |
           declare -a cats=(
             "Automotive%20Care" "Baby" "Bath%20%26%20Body" "Hair%20Care" "Makeup"
@@ -31,6 +33,5 @@ jobs:
             cat="${cats[$i]}"
             echo "[$(date '+%F %T')] calling $cat"
             curl -sSL "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$cat"
-            # pause 20 min except after last call
             [[ $i -lt 20 ]] && sleep $((20*60))
           done
