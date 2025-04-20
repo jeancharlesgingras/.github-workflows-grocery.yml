@@ -1,16 +1,17 @@
+# .github/workflows/ondemand-group-a.yml
 name: OnDemand‑Group‑A
 
 on:
-  # ---- start 02:00 UTC  (replace with your exact midnight local offset)
+  # 02:00 UTC every day  (change to your true UTC time)
   schedule:
     - cron: '0 2 * * *'
-  workflow_dispatch:
+  workflow_dispatch:      # <-- this line makes the manual button
 
 jobs:
   run_cat_group_a:
     runs-on: ubuntu-latest
     steps:
-      - name: 18 categories (20 min interval)
+      - name: Run 18 categories (20‑minute spacing)
         run: |
           declare -a cats=(
             "Automotive Care" "Bath & Body" "Hair Care" "Makeup" "Skin Care"
@@ -20,12 +21,15 @@ jobs:
             "Kitchen & Dining" "Storage & Organization"
             "Men Fashion" "Women Fashion"
           )
+
           for i in "${!cats[@]}"; do
-            slug=$(python - <<EOF
-import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))
-EOF
- "${cats[$i]}")
-            echo "[$(date)] $slug"
+            # URL‑encode the label
+            slug=$(python3 - <<'PY'
+import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))
+PY
+            "${cats[$i]}")
+            echo "[$(date)] calling $slug"
             curl -sSL "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug"
+            # wait 20 min except after the last category
             [[ $i -lt $((${#cats[@]}-1)) ]] && sleep $((20*60))
           done
