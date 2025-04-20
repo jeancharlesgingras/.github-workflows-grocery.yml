@@ -2,16 +2,16 @@
 name: OnDemand‑Group‑A
 
 on:
-  # 02:00 UTC every day  (change to your true UTC time)
+  # run every day 02:00 UTC  (← change to your real UTC midnight if needed)
   schedule:
     - cron: '0 2 * * *'
-  workflow_dispatch:      # <-- this line makes the manual button
+  workflow_dispatch:        # adds the “Run workflow” button in Actions
 
 jobs:
   run_cat_group_a:
     runs-on: ubuntu-latest
     steps:
-      - name: Run 18 categories (20‑minute spacing)
+      - name: Run 18 categories (20‑min spacing)
         run: |
           declare -a cats=(
             "Automotive Care" "Bath & Body" "Hair Care" "Makeup" "Skin Care"
@@ -23,11 +23,8 @@ jobs:
           )
 
           for i in "${!cats[@]}"; do
-            # URL‑encode the label
-            slug=$(python3 - <<'PY'
-import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))
-PY
-            "${cats[$i]}")
+            # URL‑encode the label in one shell line (avoids YAML here‑doc)
+            slug=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" "${cats[$i]}")
             echo "[$(date)] calling $slug"
             curl -sSL "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug"
             # wait 20 min except after the last category
