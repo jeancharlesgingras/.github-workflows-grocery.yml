@@ -1,0 +1,32 @@
+name: OnDemand‑Group‑B
+
+on:
+  # ---- start right after group A finishes (08:10 UTC here)
+  schedule:
+    - cron: '10 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  run_cat_group_b:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 15 categories (20 min interval)
+        run: |
+          declare -a cats=(
+            "Home Storage & Organization" "Home Décor"
+            "Patio Furniture & Accessories" "Outdoor Décor"
+            "Garden Structures & Germination Equipment" "Outdoor Cooking"
+            "Sports Fan Shop" "Diet & Nutrition Products"
+            "Snacks & Sweets" "Cooking & Baking Supplies"
+            "Health Care Products" "Tableware" "Kitchen Cookware"
+            "Baby" "Sports & Outdoors"
+          )
+          for i in "${!cats[@]}"; do
+            slug=$(python - <<EOF
+import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))
+EOF
+ "${cats[$i]}")
+            echo "[$(date)] $slug"
+            curl -sSL "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug"
+            [[ $i -lt $((${#cats[@]}-1)) ]] && sleep $((20*60))
+          done
