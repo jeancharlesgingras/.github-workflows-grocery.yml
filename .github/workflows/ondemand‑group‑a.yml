@@ -1,21 +1,19 @@
-# .github/workflows/ondemand-group-a.yml
 name: OnDemand‑Group‑A
 
 on:
-  # run every day 02:00 UTC  (← change to your real UTC midnight if needed)
   schedule:
-    - cron: '0 2 * * *'
-  workflow_dispatch:        # adds the “Run workflow” button in Actions
+    - cron: '0 2 * * *'      # 02:00 UTC  (= 00:00 local)
+  workflow_dispatch:
 
-  concurrency:
-  group: ondemand-group-a
-  cancel-in-progress: false
+concurrency:
+  group: ondemand            # same token in **both** files
+  cancel-in-progress: false  # queue rather than kill
 
 jobs:
   run_cat_group_a:
     runs-on: ubuntu-latest
     steps:
-      - name: Run 18 categories (20‑min spacing)
+      - name: Run 18 categories (20 min spacing)
         run: |
           declare -a cats=(
             "Automotive Care" "Bath & Body" "Hair Care" "Makeup" "Skin Care"
@@ -25,12 +23,10 @@ jobs:
             "Kitchen & Dining" "Storage & Organization"
             "Men Fashion" "Women Fashion"
           )
-
           for i in "${!cats[@]}"; do
-            # URL‑encode the label in one shell line (avoids YAML here‑doc)
-            slug=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" "${cats[$i]}")
-            echo "[$(date)] calling $slug"
+            slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' \
+              "${cats[$i]}")
+            echo "[$(date)] $slug"
             curl -sSL "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug"
-            # wait 20 min except after the last category
             [[ $i -lt $((${#cats[@]}-1)) ]] && sleep $((20*60))
           done
