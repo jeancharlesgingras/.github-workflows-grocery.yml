@@ -2,42 +2,33 @@
 name: OnDemand‑Group‑B
 
 on:
-  # run every day 06:00 UTC  (≈ 02:00 EDT / 23:00 PDT) – adjust if needed
   schedule:
-    - cron: '0 6 * * *'
+    - cron: '10 8 * * *'      # 08:10 UTC  (= 06:10 local)
   workflow_dispatch:
 
 concurrency:
-  group: ondemand-group-b
+  group: ondemand             # identical to group‑A
   cancel-in-progress: false
-  
+
 jobs:
   run_cat_group_b:
     runs-on: ubuntu-latest
     steps:
-      - name: Run 15 categories (20‑min spacing)
+      - name: Run 15 categories (20 min spacing)
         run: |
           declare -a cats=(
-            "Home Décor"
-            "Patio Furniture & Accessories"
-            "Outdoor Décor"
-            "Garden Structures & Germination Equipment"
-            "Outdoor Cooking"
-            "Sports Fan Shop"
-            "Diet & Nutrition Products"
-            "Snacks & Sweets"
-            "Cooking & Baking Supplies"
-            "Health Care Products"
-            "Tableware"
-            "Kitchen Cookware"
-            "Sports & Outdoors"
-            "Baby"
-            "Home Storage & Organization"
+            "Home Storage & Organization" "Home Décor"
+            "Patio Furniture & Accessories" "Outdoor Décor"
+            "Garden Structures & Germination Equipment" "Outdoor Cooking"
+            "Sports Fan Shop" "Diet & Nutrition Products"
+            "Snacks & Sweets" "Cooking & Baking Supplies"
+            "Health Care Products" "Tableware" "Kitchen Cookware"
+            "Baby" "Sports & Outdoors"
           )
-
           for i in "${!cats[@]}"; do
-            slug=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" "${cats[$i]}")
-            echo "[$(date)] calling $slug"
+            slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' \
+              "${cats[$i]}")
+            echo "[$(date)] $slug"
             curl -sSL "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug"
             [[ $i -lt $((${#cats[@]}-1)) ]] && sleep $((20*60))
           done
