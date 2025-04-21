@@ -7,6 +7,10 @@ on:
     - cron: '0 6 * * *'
   workflow_dispatch:
 
+concurrency:
+  group: ondemand-group-b
+  cancel-in-progress: false
+  
 jobs:
   run_cat_group_b:
     runs-on: ubuntu-latest
