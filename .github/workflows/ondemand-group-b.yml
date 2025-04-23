@@ -1,20 +1,19 @@
-# .github/workflows/ondemand-group-b.yml
-name: OnDemand‑Group‑B
+name: OnDemand-Group-B
 
 on:
   schedule:
-    - cron: '10 8 * * *'      # 08:10 UTC  (= 06:10 local)
+    - cron: '10 8 * * *'      # 08:10 UTC  (≈ 06:10 local) – starts after A finishes
   workflow_dispatch:
 
 concurrency:
-  group: ondemand             # identical to group‑A
+  group: ondemand             # same token as group-A
   cancel-in-progress: false
 
 jobs:
   run_cat_group_b:
     runs-on: ubuntu-latest
     steps:
-      - name: Run 15 categories (20 min spacing)
+      - name: Run 16 categories (20 min spacing)
         run: |
           declare -a cats=(
             "Home Storage & Organization" "Home Décor"
@@ -23,12 +22,13 @@ jobs:
             "Sports Fan Shop" "Diet & Nutrition Products"
             "Snacks & Sweets" "Cooking & Baking Supplies"
             "Health Care Products" "Tableware" "Kitchen Cookware"
-            "Baby" "Sports & Outdoors"
+            "Baby" "Sports & Outdoors" "Women Fashion"
           )
+
           for i in "${!cats[@]}"; do
             slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' \
               "${cats[$i]}")
-            echo "[$(date)] $slug"
+            echo "[$(date)] calling $slug"
             curl -sSL "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug"
             [[ $i -lt $((${#cats[@]}-1)) ]] && sleep $((20*60))
           done
