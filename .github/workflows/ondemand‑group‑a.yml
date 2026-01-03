@@ -1,12 +1,15 @@
 name: OnDemand-Group-A
 
 on:
+  # GitHub schedules are UTC and do NOT follow DST.
+  # We run at both possible UTC times and then gate to midnight Quebec time inside the job.
   schedule:
-    - cron: '0 2 * * *'       # 02:00 UTC  (= midnight local)
+    - cron: '0 4 * * *'   # 04:00 UTC (midnight when Quebec is on EDT)
+    - cron: '0 5 * * *'   # 05:00 UTC (midnight when Quebec is on EST)
   workflow_dispatch:
 
 concurrency:
-  group: ondemand             # shared token – prevents overlap
+  group: ondemand
   cancel-in-progress: false
 
 jobs:
@@ -14,7 +17,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run 17 categories (20 min spacing)
+        shell: bash
         run: |
+          set -euo pipefail
+
+          # Gate: only run when it is midnight in Quebec (America/Toronto).
+          # Ubuntu runner has TZ database; setting TZ is enough for date.
+          export TZ="America/Toronto"
+          if [[ "$(date +%H)" != "00" ]]; then
+            echo "Not midnight in Quebec (America/Toronto). Current local time: $(date). Exiting."
+            exit 0
+          fi
+
           declare -a cats=(
             "Automotive Care" "Bath & Body" "Hair Care" "Makeup" "Skin Care"
             "Electronics" "Toys & Games" "Tools & Home Improvement"
@@ -24,10 +38,29 @@ jobs:
             "Men Fashion"
           )
 
+          fail=0
+          nonce="$(date +%s)"
+
           for i in "${!cats[@]}"; do
-            slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' \
-              "${cats[$i]}")
-            echo "[$(date)] calling $slug"
-            curl -sSL "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug"
+            cat="${cats[$i]}"
+            slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$cat")
+
+            echo "[$(date)] running category: $cat"
+            echo "[$(date)] calling task=$slug"
+
+            if ! curl --fail-with-body -sS -L \
+              --connect-timeout 15 \
+              --max-time 180 \
+              --retry 5 \
+              --retry-delay 5 \
+              --retry-all-errors \
+              "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug&nonce=$nonce"
+            then
+              echo "ERROR: category failed: $cat"
+              fail=1
+            fi
+
             [[ $i -lt $((${#cats[@]}-1)) ]] && sleep $((20*60))
           done
+
+          exit $fail
