@@ -1,10 +1,12 @@
 name: OnDemand-Group-B
 
 on:
-  # Run at both possible UTC times and gate to 06:10 Quebec time (America/Toronto)
   schedule:
-    - cron: '10 10 * * *'  # 10:10 UTC (06:10 when Quebec is on EDT)
-    - cron: '10 11 * * *'  # 11:10 UTC (06:10 when Quebec is on EST)
+    # 06:10 Quebec time year-round:
+    # - 11:10 UTC = 06:10 EST (winter)
+    # - 10:10 UTC = 06:10 EDT (summer)
+    - cron: '10 10 * * *'
+    - cron: '10 11 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -20,10 +22,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Gate: only run when it is 06:10 in Quebec (America/Toronto).
+          # ---- DST-safe gate: run only when it's 06:10 in Quebec ----
+          sudo apt-get update -y >/dev/null
+          sudo apt-get install -y tzdata >/dev/null
           export TZ="America/Toronto"
-          if [[ "$(date +%H:%M)" != "06:10" ]]; then
-            echo "Not 06:10 in Quebec (America/Toronto). Current local time: $(date). Exiting."
+
+          local_hour="$(date +%H)"
+          local_min="$(date +%M)"
+          if [[ "$local_hour" != "06" || "$local_min" != "10" ]]; then
+            echo "Not 06:10 in Quebec (America/Toronto). It's $(date). Exiting successfully."
             exit 0
           fi
 
@@ -37,29 +44,32 @@ jobs:
             "Baby" "Sports & Outdoors" "Women Fashion"
           )
 
-          fail=0
-          nonce="$(date +%s)"
+          failures=0
+          echo "Total categories: ${#cats[@]}"
 
           for i in "${!cats[@]}"; do
             cat="${cats[$i]}"
             slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$cat")
 
-            echo "[$(date)] running category: $cat"
-            echo "[$(date)] calling task=$slug"
+            echo "[$(date)] ($((i+1))/${#cats[@]}) calling: $cat"
 
-            if ! curl --fail-with-body -sS -L \
-              --connect-timeout 15 \
-              --max-time 180 \
-              --retry 5 \
-              --retry-delay 5 \
-              --retry-all-errors \
-              "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug&nonce=$nonce"
-            then
-              echo "ERROR: category failed: $cat"
-              fail=1
+            http_code=$(curl -sS --fail-with-body \
+              -o /tmp/resp.txt -w "%{http_code}" \
+              "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug" \
+              || echo "000")
+
+            if [[ "$http_code" != "200" ]]; then
+              echo "::warning::HTTP $http_code for '$cat'"
+              echo "Response:"
+              tail -n 50 /tmp/resp.txt || true
+              failures=$((failures+1))
             fi
 
-            [[ $i -lt $((${#cats[@]}-1)) ]] && sleep $((20*60))
+            if [[ $i -lt $((${#cats[@]}-1)) ]]; then
+              echo "Sleeping 20 minutes..."
+              sleep $((20*60))
+            fi
           done
 
-          exit $fail
+          echo "Finished. failures=$failures"
+          [[ $failures -eq 0 ]] || exit 1
