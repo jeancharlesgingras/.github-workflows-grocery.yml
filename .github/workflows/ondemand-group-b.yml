@@ -1,12 +1,14 @@
 name: OnDemand-Group-B
 
 on:
+  # Run at both possible UTC times and gate to 06:10 Quebec time (America/Toronto)
   schedule:
-    - cron: '10 8 * * *'      # 08:10 UTC  (≈ 06:10 local) – starts after A finishes
+    - cron: '10 10 * * *'  # 10:10 UTC (06:10 when Quebec is on EDT)
+    - cron: '10 11 * * *'  # 11:10 UTC (06:10 when Quebec is on EST)
   workflow_dispatch:
 
 concurrency:
-  group: ondemand             # same token as group-A
+  group: ondemand
   cancel-in-progress: false
 
 jobs:
@@ -14,7 +16,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run 16 categories (20 min spacing)
+        shell: bash
         run: |
+          set -euo pipefail
+
+          # Gate: only run when it is 06:10 in Quebec (America/Toronto).
+          export TZ="America/Toronto"
+          if [[ "$(date +%H:%M)" != "06:10" ]]; then
+            echo "Not 06:10 in Quebec (America/Toronto). Current local time: $(date). Exiting."
+            exit 0
+          fi
+
           declare -a cats=(
             "Home Storage & Organization" "Home Décor"
             "Patio Furniture & Accessories" "Outdoor Décor"
@@ -25,10 +37,29 @@ jobs:
             "Baby" "Sports & Outdoors" "Women Fashion"
           )
 
+          fail=0
+          nonce="$(date +%s)"
+
           for i in "${!cats[@]}"; do
-            slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' \
-              "${cats[$i]}")
-            echo "[$(date)] calling $slug"
-            curl -sSL "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug"
+            cat="${cats[$i]}"
+            slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$cat")
+
+            echo "[$(date)] running category: $cat"
+            echo "[$(date)] calling task=$slug"
+
+            if ! curl --fail-with-body -sS -L \
+              --connect-timeout 15 \
+              --max-time 180 \
+              --retry 5 \
+              --retry-delay 5 \
+              --retry-all-errors \
+              "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug&nonce=$nonce"
+            then
+              echo "ERROR: category failed: $cat"
+              fail=1
+            fi
+
             [[ $i -lt $((${#cats[@]}-1)) ]] && sleep $((20*60))
           done
+
+          exit $fail
