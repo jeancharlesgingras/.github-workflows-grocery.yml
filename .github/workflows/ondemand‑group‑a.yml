@@ -23,8 +23,9 @@ jobs:
             "Electronics" "Toys & Games" "Tools & Home Improvement"
             "Dog Supplies" "Cat Supplies" "Household Supplies"
             "Vitamins, Minerals & Supplements" "Grocery" "Bath"
-            "Kitchen & Dining" "Storage & Organization"
+            "Kitchen & Dining"
             "Men Fashion"
+            "Women Fashion"
           )
 
           failures=0
