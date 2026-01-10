@@ -25,7 +25,7 @@ jobs:
             "Sports Fan Shop" "Diet & Nutrition Products"
             "Snacks & Sweets" "Cooking & Baking Supplies"
             "Health Care Products" "Tableware" "Kitchen Cookware"
-            "Baby" "Sports & Outdoors" "Women Fashion"
+            "Baby" "Sports & Outdoors"
           )
 
           failures=0
