@@ -2,7 +2,11 @@ name: OnDemand-Group-C-Day-650
 
 on:
   schedule:
-    - cron: '10 18 * * *'  # 18:10 UTC = 13:10 Quebec (EST)
+    # Quebec (EST) = UTC-5
+    # 13:10–18:10 Quebec => 18:10–23:10 UTC
+    - cron: '10 18-23 * * *'
+    # 19:10–23:10 Quebec => 00:10–04:10 UTC
+    - cron: '10 0-4 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -13,42 +17,61 @@ jobs:
   run_cat_group_c:
     runs-on: ubuntu-latest
     steps:
-      - name: Run top categories (650 limit)
+      - name: Run ONE category per hour (limit=650)
         shell: bash
         run: |
           set -euo pipefail
 
+          # 11 hourly slots (Quebec 1pm..11pm) mapped to 11 DIFFERENT categories.
+          # Keep them as names because your endpoint currently uses: &task=<urlencoded name>
           declare -a cats=(
             "Health & Personal Care"
             "Tools & Home Improvement"
             "Kitchen & Dining"
             "Grocery"
             "Toys & Games"
+            "Sports & Outdoors"
+            "Beauty"
+            "Baby"
+            "Pet Supplies"
+            "Office Products"
+            "Patio, Lawn & Garden"
           )
 
-          failures=0
-          echo "Total categories: ${#cats[@]}"
+          HOUR_UTC="$(date -u +%H)"
 
-          for i in "${!cats[@]}"; do
-            cat="${cats[$i]}"
-            slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$cat")
+          # Slot index for 18..23 and 00..04 UTC (11 slots total)
+          case "$HOUR_UTC" in
+            18) idx=0 ;;
+            19) idx=1 ;;
+            20) idx=2 ;;
+            21) idx=3 ;;
+            22) idx=4 ;;
+            23) idx=5 ;;
+            00) idx=6 ;;
+            01) idx=7 ;;
+            02) idx=8 ;;
+            03) idx=9 ;;
+            04) idx=10 ;;
+            *)  echo "Outside 1–11pm Quebec window. Exiting."; exit 0 ;;
+          esac
 
-            echo "[$(date -u)] ($((i+1))/${#cats[@]}) calling: $cat (limit=650)"
+          cat="${cats[$idx]}"
+          slug="$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$cat")"
 
-            http_code=$(curl -sS --fail-with-body \
-              -o /tmp/resp.txt -w "%{http_code}" \
-              "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug&limit=650" \
-              || echo "000")
+          echo "[$(date -u)] slot idx=$idx  category='$cat'  limit=650"
 
-            if [[ "$http_code" != "200" ]]; then
-              echo "::warning::HTTP $http_code for '$cat'"
-              echo "Response (last 50 lines):"
-              tail -n 50 /tmp/resp.txt || true
-              failures=$((failures+1))
-            fi
+          http_code="$(curl -sS --fail-with-body \
+            -o /tmp/resp.txt -w "%{http_code}" \
+            "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug&limit=650" \
+            || echo "000")"
 
-            [[ $i -lt $((${#cats[@]}-1)) ]] && sleep $((20*60))
-          done
+          if [[ "$http_code" != "200" ]]; then
+            echo "::warning::HTTP $http_code for '$cat'"
+            echo "Response (last 50 lines):"
+            tail -n 50 /tmp/resp.txt || true
+            exit 1
+          fi
 
-          echo "Finished. failures=$failures"
-          [[ $failures -eq 0 ]] || exit 1
+          echo "OK (HTTP 200). Response (last 30 lines):"
+          tail -n 30 /tmp/resp.txt || true
