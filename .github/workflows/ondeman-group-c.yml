@@ -2,28 +2,22 @@ name: OnDemand-Group-C-Day-650
 
 on:
   schedule:
-    # Quebec (EST) = UTC-5
-    # 13:10–18:10 Quebec => 18:10–23:10 UTC
-    - cron: '10 18-23 * * *'
-    # 19:10–23:10 Quebec => 00:10–04:10 UTC
-    - cron: '10 0-4 * * *'
+    - cron: '10 * * * *'   # every hour at :10 UTC; script enforces 1–11pm Quebec
   workflow_dispatch:
 
 concurrency:
-  group: ondemand
+  group: ondemand-c
   cancel-in-progress: false
 
 jobs:
   run_cat_group_c:
     runs-on: ubuntu-latest
     steps:
-      - name: Run ONE category per hour (limit=650)
+      - name: Run ONE category per hour (limit=650) during 1–11pm Quebec
         shell: bash
         run: |
           set -euo pipefail
 
-          # 11 hourly slots (Quebec 1pm..11pm) mapped to 11 DIFFERENT categories.
-          # Keep them as names because your endpoint currently uses: &task=<urlencoded name>
           declare -a cats=(
             "Health & Personal Care"
             "Tools & Home Improvement"
@@ -38,28 +32,20 @@ jobs:
             "Patio, Lawn & Garden"
           )
 
-          HOUR_UTC="$(date -u +%H)"
+          HOUR_QC="$(TZ=America/Toronto date +%H)"
 
-          # Slot index for 18..23 and 00..04 UTC (11 slots total)
-          case "$HOUR_UTC" in
-            18) idx=0 ;;
-            19) idx=1 ;;
-            20) idx=2 ;;
-            21) idx=3 ;;
-            22) idx=4 ;;
-            23) idx=5 ;;
-            00) idx=6 ;;
-            01) idx=7 ;;
-            02) idx=8 ;;
-            03) idx=9 ;;
-            04) idx=10 ;;
-            *)  echo "Outside 1–11pm Quebec window. Exiting."; exit 0 ;;
-          esac
+          if [[ "$HOUR_QC" -lt 13 || "$HOUR_QC" -gt 23 ]]; then
+            echo "Outside 1–11pm Quebec window. QC hour=$HOUR_QC. Exiting."
+            exit 0
+          fi
 
+          idx=$((HOUR_QC - 13))
           cat="${cats[$idx]}"
           slug="$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$cat")"
 
-          echo "[$(date -u)] slot idx=$idx  category='$cat'  limit=650"
+          echo "UTC now: $(date -u)"
+          echo "QC  now: $(TZ=America/Toronto date)"
+          echo "slot idx=$idx category='$cat' limit=650"
 
           http_code="$(curl -sS --fail-with-body \
             -o /tmp/resp.txt -w "%{http_code}" \
