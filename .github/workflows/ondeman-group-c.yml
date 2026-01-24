@@ -19,7 +19,7 @@ jobs:
           set -euo pipefail
 
           declare -a cats=(
-            "Electronics"
+            "Health & Personal Care"
             "Tools & Home Improvement"
             "Kitchen & Dining"
             "Grocery"
