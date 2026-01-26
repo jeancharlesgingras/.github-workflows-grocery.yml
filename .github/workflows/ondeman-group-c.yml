@@ -17,8 +17,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-echo "NOW_UTC=$(date -u)  NOW_QUEBEC=$(TZ=America/Toronto date)  HOUR_UTC=$(date -u +%H)"
           
 
           # 11 hourly slots (Quebec 1pm..11pm) mapped to 11 DIFFERENT categories.
