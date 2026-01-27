@@ -2,7 +2,7 @@ name: OnDemand-Group-C-Day-650
 
 on:
   schedule:
-    - cron: '10 * * * *'  # every hour at :10 UTC; script enforces 1–11pm Quebec
+    - cron: '10 18-23 * * *'  # 13:10–18:10 Quebec (EST) = 18:10–23:10 UTC
   workflow_dispatch:
 
 concurrency:
@@ -13,13 +13,11 @@ jobs:
   run_cat_group_c:
     runs-on: ubuntu-latest
     steps:
-      - name: Run ONE category per hour (limit=650) during 1–11pm Quebec
+      - name: Run ONE category per run (limit=650) — Group C (1:10–6:10pm QC)
         shell: bash
         run: |
           set -euo pipefail
-          
 
-          # 11 hourly slots (Quebec 1pm..11pm) mapped to 11 DIFFERENT categories.
           declare -a cats=(
             "Health & Personal Care"
             "Tools & Home Improvement"
@@ -27,16 +25,11 @@ jobs:
             "Grocery"
             "Toys & Games"
             "Sports & Outdoors"
-            "Beauty"
-            "Baby"
-            "Pet Supplies"
-            "Office Products"
-            "Patio, Lawn & Garden"
           )
 
           HOUR_UTC="$(date -u +%H)"
 
-          # Slot index for 18..23 and 00..04 UTC (11 slots total)
+          # Map UTC hour to index (18..23 => 0..5)
           case "$HOUR_UTC" in
             18) idx=0 ;;
             19) idx=1 ;;
@@ -44,30 +37,23 @@ jobs:
             21) idx=3 ;;
             22) idx=4 ;;
             23) idx=5 ;;
-            00) idx=6 ;;
-            01) idx=7 ;;
-            02) idx=8 ;;
-            03) idx=9 ;;
-            04) idx=10 ;;
-            *)  echo "Outside 1–11pm Quebec window. Exiting."; exit 0 ;;
+            *) echo "Not a Group C slot. Exiting."; exit 0 ;;
           esac
 
           cat="${cats[$idx]}"
           slug="$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$cat")"
 
-          echo "[$(date -u)] slot idx=$idx  category='$cat'  limit=650"
+          echo "[$(date -u)] Group C idx=$idx category='$cat' limit=650"
 
-          http_code="$(curl -sS --fail-with-body \
+          http_code="$(curl -sS -L --fail-with-body \
             -o /tmp/resp.txt -w "%{http_code}" \
             "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug&limit=650" \
             || echo "000")"
 
           if [[ "$http_code" != "200" ]]; then
             echo "::warning::HTTP $http_code for '$cat'"
-            echo "Response (last 50 lines):"
             tail -n 50 /tmp/resp.txt || true
             exit 1
           fi
 
-          echo "OK (HTTP 200). Response (last 30 lines):"
           tail -n 30 /tmp/resp.txt || true
