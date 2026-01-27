@@ -1,0 +1,57 @@
+name: OnDemand-Group-D-Day-650
+
+on:
+  schedule:
+    - cron: '10 0-4 * * *'  # 19:10–23:10 Quebec (EST) = 00:10–04:10 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ondemand-d
+  cancel-in-progress: false
+
+jobs:
+  run_cat_group_d:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run ONE category per run (limit=650) — Group D (7:10–11:10pm QC)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          declare -a cats=(
+            "Beauty"
+            "Baby"
+            "Pet Supplies"
+            "Office Products"
+            "Patio, Lawn & Garden"
+          )
+
+          HOUR_UTC="$(date -u +%H)"
+
+          # Map UTC hour to index (00..04 => 0..4)
+          case "$HOUR_UTC" in
+            00) idx=0 ;;
+            01) idx=1 ;;
+            02) idx=2 ;;
+            03) idx=3 ;;
+            04) idx=4 ;;
+            *) echo "Not a Group D slot. Exiting."; exit 0 ;;
+          esac
+
+          cat="${cats[$idx]}"
+          slug="$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$cat")"
+
+          echo "[$(date -u)] Group D idx=$idx category='$cat' limit=650"
+
+          http_code="$(curl -sS -L --fail-with-body \
+            -o /tmp/resp.txt -w "%{http_code}" \
+            "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug&limit=650" \
+            || echo "000")"
+
+          if [[ "$http_code" != "200" ]]; then
+            echo "::warning::HTTP $http_code for '$cat'"
+            tail -n 50 /tmp/resp.txt || true
+            exit 1
+          fi
+
+          tail -n 30 /tmp/resp.txt || true
