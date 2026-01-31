@@ -1,1 +1,41 @@
+name: OnDemand-Group-C-Day-650
+
+on:
+  schedule:
+    - cron: '10 18 * * *'   # same style as A/B (fixed start time)
+  workflow_dispatch:
+
+concurrency:
+  group: ondemand-c
+  cancel-in-progress: false
+
+jobs:
+  run_cat_group_c:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run 6 categories (650 each, 1 hour spacing)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          declare -a cat_ids=(
+            "6205124011"   # Beauty & Personal Care
+            "21353444011"  # Clothing Men
+            "21353446011"  # Clothing Women
+            "6967215011"   # Grocery
+            "6205177011"   # Health & Personal Care
+            "2206275011"   # Home & Kitchen
+          )
+
+          for i in "${!cat_ids[@]}"; do
+            id="${cat_ids[$i]}"
+
+            echo "Running category $id with limit=650"
+
+            curl -sS \
+              "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=cat:${id}&limit=650"
+
+            [[ $i -lt 5 ]] && sleep 3600
+          done
 
