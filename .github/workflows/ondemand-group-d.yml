@@ -2,15 +2,15 @@ name: OnDemand-Group-D
 
 on:
   schedule:
-    - cron: '35 * * * *'   # every hour at :35
+    - cron: '35 * * * *'  # every hour at :35
   workflow_dispatch:
 
 jobs:
   run_cat_group_d:
     runs-on: ubuntu-latest
-
     steps:
       - name: Run ONE category per run (limit=650)
+        shell: bash
         run: |
           set -euo pipefail
 
@@ -24,11 +24,26 @@ jobs:
           )
 
           IDX=$(( ( $(date +%s) / 3600 ) % ${#CATS[@]} ))
-          ENTRY=${CATS[$IDX]}
+          ENTRY="${CATS[$IDX]}"
 
-          LABEL=${ENTRY%%|*}
-          CATID=${ENTRY##*|}
+          LABEL="${ENTRY%%|*}"
+          CATID="${ENTRY##*|}"
 
-          echo "Running $LABEL ($CATID)"
+          BASE_URL="${{ secrets.ONDEMAND_URL }}"
+          SECRET="${{ secrets.ONDEMAND_SECRET }}"
 
-          curl -s "${{ secrets.ONDEMAND_URL }}?secret=${{ secrets.ONDEMAND_SECRET }}&task=cat:$CATID&limit=650"
+          if [[ -z "$BASE_URL" ]]; then
+            echo "ERROR: ONDEMAND_URL secret is empty."
+            exit 1
+          fi
+
+          SEP='?'
+          [[ "$BASE_URL" == *\?* ]] && SEP='&'
+
+          FINAL_URL="${BASE_URL}${SEP}secret=${SECRET}&task=cat:${CATID}&limit=650"
+
+          echo "Running: ${LABEL} (${CATID})"
+          echo "URL (redacted secret): ${BASE_URL}${SEP}secret=***&task=cat:${CATID}&limit=650"
+
+          curl -sS -L --fail "$FINAL_URL" | head -c 500
+          echo ""
