@@ -2,48 +2,52 @@ name: OnDemand-Group-C
 
 on:
   schedule:
-    - cron: '5 * * * *'   # every hour at :05
+    - cron: '10 * * * *'   # every hour at :10 UTC
   workflow_dispatch:
+
+concurrency:
+  group: ondemand
+  cancel-in-progress: false
 
 jobs:
   run_cat_group_c:
     runs-on: ubuntu-latest
     steps:
-      - name: Run ONE category per run (limit=650)
+      - name: Run ONE category per run (rotating) (limit=650)
         shell: bash
         run: |
           set -euo pipefail
 
-          CATS=(
-            "Beauty & Personal Care|6205124011"
-            "Clothing Men|21353444011"
-            "Clothing Women|21353446011"
-            "Grocery|6967215011"
-            "Health & Personal Care|6205177011"
+          # Group C categories (edit these to YOUR exact list)
+          declare -a cats=(
+            "Home Storage & Organization|2224199011"
+            "Home Décor|2224027011"
+            "Patio Furniture & Accessories|2224159011"
+            "Outdoor Décor|2224158011"
+            "Garden Structures & Germination Equipment|2224149011"
+            "Outdoor Cooking|6257202011"
+            "Sports Fan Shop|2406064011"
           )
 
-          IDX=$(( ( $(date +%s) / 3600 ) % ${#CATS[@]} ))
-          ENTRY="${CATS[$IDX]}"
-
+          # Rotate based on hour so it picks a different one each run
+          IDX=$(( ( $(date -u +%s) / 3600 ) % ${#cats[@]} ))
+          ENTRY="${cats[$IDX]}"
           LABEL="${ENTRY%%|*}"
           CATID="${ENTRY##*|}"
 
-          BASE_URL="${{ secrets.ONDEMAND_URL }}"
-          SECRET="${{ secrets.ONDEMAND_SECRET }}"
+          echo "[$(date -u)] Running Group-C: $LABEL ($CATID)"
 
-          if [[ -z "$BASE_URL" ]]; then
-            echo "ERROR: ONDEMAND_URL secret is empty."
+          # Call your existing webapp + secret (same as A)
+          http_code=$(curl -sS --fail-with-body \
+            -o /tmp/resp.txt -w "%{http_code}" \
+            "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=cat:${CATID}&limit=650" \
+            || echo "000")
+
+          if [[ "$http_code" != "200" ]]; then
+            echo "::warning::HTTP $http_code for '$LABEL'"
+            echo "Response (last 50 lines):"
+            tail -n 50 /tmp/resp.txt || true
             exit 1
           fi
 
-          # If BASE_URL already has a "?" then append with "&", otherwise with "?"
-          SEP='?'
-          [[ "$BASE_URL" == *\?* ]] && SEP='&'
-
-          FINAL_URL="${BASE_URL}${SEP}secret=${SECRET}&task=cat:${CATID}&limit=650"
-
-          echo "Running: ${LABEL} (${CATID})"
-          echo "URL (redacted secret): ${BASE_URL}${SEP}secret=***&task=cat:${CATID}&limit=650"
-
-          curl -sS -L --fail "$FINAL_URL" | head -c 500
-          echo ""
+          echo "OK (200) for '$LABEL'"
