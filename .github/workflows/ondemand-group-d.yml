@@ -2,48 +2,51 @@ name: OnDemand-Group-D
 
 on:
   schedule:
-    - cron: '35 * * * *'  # every hour at :35
+    - cron: '40 * * * *'   # every hour at :40 UTC
   workflow_dispatch:
+
+concurrency:
+  group: ondemand
+  cancel-in-progress: false
 
 jobs:
   run_cat_group_d:
     runs-on: ubuntu-latest
     steps:
-      - name: Run ONE category per run (limit=650)
+      - name: Run ONE category per run (rotating) (limit=650)
         shell: bash
         run: |
           set -euo pipefail
 
-          CATS=(
-            "Home & Kitchen|2206275011"
-            "Office Products|6205511011"
-            "Pet Supplies|6205514011"
+          # Group D categories (edit these to YOUR exact list)
+          declare -a cats=(
+            "Diet & Nutrition Products|6369740011"
+            "Snacks & Sweets|23760073011"
+            "Cooking & Baking Supplies|7351934011"
+            "Health Care Products|6369959011"
+            "Tableware|2224139011"
+            "Kitchen Cookware|6647367011"
+            "Baby|3561346011"
             "Sports & Outdoors|2242989011"
-            "Tools & Home Improvement|3006902011"
-            "Toys & Games|6205517011"
           )
 
-          IDX=$(( ( $(date +%s) / 3600 ) % ${#CATS[@]} ))
-          ENTRY="${CATS[$IDX]}"
-
+          IDX=$(( ( $(date -u +%s) / 3600 ) % ${#cats[@]} ))
+          ENTRY="${cats[$IDX]}"
           LABEL="${ENTRY%%|*}"
           CATID="${ENTRY##*|}"
 
-          BASE_URL="${{ secrets.ONDEMAND_URL }}"
-          SECRET="${{ secrets.ONDEMAND_SECRET }}"
+          echo "[$(date -u)] Running Group-D: $LABEL ($CATID)"
 
-          if [[ -z "$BASE_URL" ]]; then
-            echo "ERROR: ONDEMAND_URL secret is empty."
+          http_code=$(curl -sS --fail-with-body \
+            -o /tmp/resp.txt -w "%{http_code}" \
+            "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=cat:${CATID}&limit=650" \
+            || echo "000")
+
+          if [[ "$http_code" != "200" ]]; then
+            echo "::warning::HTTP $http_code for '$LABEL'"
+            echo "Response (last 50 lines):"
+            tail -n 50 /tmp/resp.txt || true
             exit 1
           fi
 
-          SEP='?'
-          [[ "$BASE_URL" == *\?* ]] && SEP='&'
-
-          FINAL_URL="${BASE_URL}${SEP}secret=${SECRET}&task=cat:${CATID}&limit=650"
-
-          echo "Running: ${LABEL} (${CATID})"
-          echo "URL (redacted secret): ${BASE_URL}${SEP}secret=***&task=cat:${CATID}&limit=650"
-
-          curl -sS -L --fail "$FINAL_URL" | head -c 500
-          echo ""
+          echo "OK (200) for '$LABEL'"
