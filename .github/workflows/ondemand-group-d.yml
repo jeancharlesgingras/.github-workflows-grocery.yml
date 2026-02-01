@@ -2,7 +2,7 @@ name: OnDemand-Group-D
 
 on:
   schedule:
-    - cron: '40 * * * *'   # every hour at :40 UTC
+    - cron: '40 * * * *'   # minute 40 of every hour (UTC)
   workflow_dispatch:
 
 concurrency:
@@ -13,40 +13,52 @@ jobs:
   run_cat_group_d:
     runs-on: ubuntu-latest
     steps:
-      - name: Run ONE category per run (rotating) (limit=650)
+      - name: Run 11 categories (limit=650, 5 min spacing)
         shell: bash
         run: |
           set -euo pipefail
 
-          # Group D categories (edit these to YOUR exact list)
+          LIMIT=650
+          SLEEP_SECONDS=$((5*60))
+
           declare -a cats=(
-            "Diet & Nutrition Products|6369740011"
-            "Snacks & Sweets|23760073011"
-            "Cooking & Baking Supplies|7351934011"
-            "Health Care Products|6369959011"
-            "Tableware|2224139011"
-            "Kitchen Cookware|6647367011"
-            "Baby|3561346011"
-            "Sports & Outdoors|2242989011"
+            "Beauty & Personal Care"
+            "Clothing Men"
+            "Clothing Women"
+            "Grocery"
+            "Health & Personal Care"
+            "Home & Kitchen"
+            "Office Products"
+            "Pett Supplies"
+            "Sports & Outdoors"
+            "Tools & Home Improvement"
+            "Toys & Games"
           )
 
-          IDX=$(( ( $(date -u +%s) / 3600 ) % ${#cats[@]} ))
-          ENTRY="${cats[$IDX]}"
-          LABEL="${ENTRY%%|*}"
-          CATID="${ENTRY##*|}"
+          failures=0
+          echo "Total categories: ${#cats[@]}"
+          echo "Limit: $LIMIT"
 
-          echo "[$(date -u)] Running Group-D: $LABEL ($CATID)"
+          for i in "${!cats[@]}"; do
+            cat="${cats[$i]}"
+            slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$cat")
 
-          http_code=$(curl -sS --fail-with-body \
-            -o /tmp/resp.txt -w "%{http_code}" \
-            "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=cat:${CATID}&limit=650" \
-            || echo "000")
+            echo "[$(date -u)] ($((i+1))/${#cats[@]}) calling: $cat (limit=$LIMIT)"
 
-          if [[ "$http_code" != "200" ]]; then
-            echo "::warning::HTTP $http_code for '$LABEL'"
-            echo "Response (last 50 lines):"
-            tail -n 50 /tmp/resp.txt || true
-            exit 1
-          fi
+            http_code=$(curl -sS --fail-with-body \
+              -o /tmp/resp.txt -w "%{http_code}" \
+              "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug&limit=$LIMIT" \
+              || echo "000")
 
-          echo "OK (200) for '$LABEL'"
+            if [[ "$http_code" != "200" ]]; then
+              echo "::warning::HTTP $http_code for '$cat'"
+              echo "Response (last 50 lines):"
+              tail -n 50 /tmp/resp.txt || true
+              failures=$((failures+1))
+            fi
+
+            [[ $i -lt $((${#cats[@]}-1)) ]] && sleep "$SLEEP_SECONDS"
+          done
+
+          echo "Finished. failures=$failures"
+          [[ $failures -eq 0 ]] || exit 1
