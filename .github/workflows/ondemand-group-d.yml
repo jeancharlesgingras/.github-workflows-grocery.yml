@@ -1,8 +1,6 @@
 name: OnDemand-Group-D
 
 on:
-  schedule:
-    - cron: '40 * * * *'   # minute 40 of every hour (UTC)
   workflow_dispatch:
 
 concurrency:
