@@ -9,6 +9,10 @@ concurrency:
   group: ondemand
   cancel-in-progress: false
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   run_cat_group_c:
     runs-on: ubuntu-latest
@@ -62,3 +66,17 @@ jobs:
 
           echo "Finished. failures=$failures"
           [[ $failures -eq 0 ]] || exit 1
+
+      - name: Trigger Group D after Group C completes
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Triggering OnDemand-Group-D via workflow_dispatch..."
+
+          curl -sS -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/ondemand-group-d.yml/dispatches \
+            -d '{"ref":"main"}'
