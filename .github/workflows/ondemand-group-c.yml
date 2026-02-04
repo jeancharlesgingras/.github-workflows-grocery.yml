@@ -1,1 +1,59 @@
+name: OnDemand-Group-C
 
+on:
+  schedule:
+    - cron: '0 18 * * *'   # 18:00 UTC = 13:00 Eastern (Toronto)
+  workflow_dispatch:
+
+concurrency:
+  group: ondemand
+  cancel-in-progress: false
+
+jobs:
+  run_cat_group_c:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run 6 categories (1 per hour)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          LIMIT=250
+          SLEEP_SECONDS=$((60*60))  # 60 minutes
+
+          declare -a cats=(
+            "Home Décor"
+            "Patio Furniture & Accessories"
+            "Outdoor Décor"
+            "Garden Structures & Germination Equipment"
+            "Outdoor Cooking"
+            "Diet & Nutrition Products"
+          )
+
+          failures=0
+          echo "Total categories: ${#cats[@]}"
+          echo "Limit: $LIMIT"
+
+          for i in "${!cats[@]}"; do
+            cat="${cats[$i]}"
+            slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$cat")
+
+            echo "[$(date -u)] ($((i+1))/${#cats[@]}) calling: $cat (limit=$LIMIT)"
+
+            http_code=$(curl -sS --fail-with-body \
+              -o /tmp/resp.txt -w "%{http_code}" \
+              "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug&limit=$LIMIT" \
+              || echo "000")
+
+            if [[ "$http_code" != "200" ]]; then
+              echo "::warning::HTTP $http_code for '$cat'"
+              echo "Response (last 50 lines):"
+              tail -n 50 /tmp/resp.txt || true
+              failures=$((failures+1))
+            fi
+
+            [[ $i -lt $((${#cats[@]}-1)) ]] && sleep "$SLEEP_SECONDS"
+          done
+
+          echo "Finished. failures=$failures"
+          [[ $failures -eq 0 ]] || exit 1
