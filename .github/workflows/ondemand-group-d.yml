@@ -2,7 +2,7 @@ name: OnDemand-Group-D
 
 on:
   schedule:
-    - cron: '10 0 * * *'   # 00:10 UTC = 19:10 Eastern (Toronto), after Group C finishes
+    - cron: '10 0 * * *'   # 00:10 UTC = 19:10 Eastern (Toronto) during standard time
   workflow_dispatch:
 
 concurrency:
@@ -13,20 +13,20 @@ jobs:
   run_cat_group_d:
     runs-on: ubuntu-latest
     steps:
-      - name: Run 5 categories (1 per hour)
+      - name: Run 5 categories (limit=650, 60 min spacing)
         shell: bash
         run: |
           set -euo pipefail
 
-          LIMIT=250
+          LIMIT=650
           SLEEP_SECONDS=$((60*60))  # 60 minutes
 
           declare -a cats=(
+            "Sports Fan Shop"
             "Snacks & Sweets"
             "Cooking & Baking Supplies"
             "Health Care Products"
             "Tableware"
-            "Kitchen Cookware"
           )
 
           failures=0
@@ -56,4 +56,3 @@ jobs:
 
           echo "Finished. failures=$failures"
           [[ $failures -eq 0 ]] || exit 1
-
