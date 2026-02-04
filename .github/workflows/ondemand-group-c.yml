@@ -2,7 +2,7 @@ name: OnDemand-Group-C
 
 on:
   schedule:
-    - cron: '0 18 * * *'   # 18:00 UTC = 13:00 Eastern (Toronto)
+    - cron: '0 18 * * *'   # 18:00 UTC = 13:00 Eastern (Toronto) during standard time
   workflow_dispatch:
 
 concurrency:
@@ -13,12 +13,12 @@ jobs:
   run_cat_group_c:
     runs-on: ubuntu-latest
     steps:
-      - name: Run 6 categories (1 per hour)
+      - name: Run 6 categories (limit=650, 60 min spacing)
         shell: bash
         run: |
           set -euo pipefail
 
-          LIMIT=250
+          LIMIT=650
           SLEEP_SECONDS=$((60*60))  # 60 minutes
 
           declare -a cats=(
