@@ -22,12 +22,12 @@ jobs:
           SLEEP_SECONDS=$((60*60))  # 60 minutes
 
           declare -a cats=(
-            "Home Décor"
-            "Patio Furniture & Accessories"
-            "Outdoor Décor"
-            "Garden Structures & Germination Equipment"
-            "Outdoor Cooking"
-            "Diet & Nutrition Products"
+"Beauty & Personal Care"
+"Clothing Men"
+"Clothing Women"
+"Grocery"
+"Health & Personal Care"
+"Home & Kitchen"
           )
 
           failures=0
