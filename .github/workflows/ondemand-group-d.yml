@@ -2,7 +2,7 @@ name: OnDemand-Group-D
 
 on:
   schedule:
-    - cron: '10 0 * * *'   # 00:10 UTC = 19:10 Eastern (Toronto) during standard time
+    - cron: '10 0 * * *' # 00:10 UTC = 19:10 Eastern (Toronto) during standard time
   workflow_dispatch:
 
 concurrency:
