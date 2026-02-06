@@ -2,7 +2,7 @@ name: OnDemand-Group-C
 
 on:
   schedule:
-    - cron: '0 18 * * *'   # 18:00 UTC = 13:00 Eastern (Toronto) during standard time
+    - cron: '0 18 * * *' # 18:00 UTC = 13:00 Eastern (Toronto) during standard time
   workflow_dispatch:
 
 concurrency:
@@ -22,12 +22,12 @@ jobs:
           SLEEP_SECONDS=$((60*60))  # 60 minutes
 
           declare -a cats=(
-"Beauty & Personal Care"
-"Clothing Men"
-"Clothing Women"
-"Grocery"
-"Health & Personal Care"
-"Home & Kitchen"
+            "Beauty & Personal Care"
+            "Clothing Men"
+            "Clothing Women"
+            "Grocery"
+            "Health & Personal Care"
+            "Home & Kitchen"
           )
 
           failures=0
