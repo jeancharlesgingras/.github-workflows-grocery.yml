@@ -39,10 +39,12 @@ jobs:
 
             echo "[$(date -u)] ($((i+1))/${#cats[@]}) calling: $cat (limit=$LIMIT)"
 
-            http_code=$(curl -sS --fail-with-body \
-              -o /tmp/resp.txt -w "%{http_code}" \
-              "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug&limit=$LIMIT" \
-              || echo "000")
+            http_code=$(
+              curl -sS -L --max-redirs 5 --fail-with-body \
+                -o /tmp/resp.txt -w "%{http_code}" \
+                "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug&limit=$LIMIT" \
+              || echo "000"
+            )
 
             if [[ "$http_code" != "200" ]]; then
               echo "::warning::HTTP $http_code for '$cat'"
