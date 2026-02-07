@@ -37,25 +37,45 @@ jobs:
           for i in "${!cats[@]}"; do
             cat="${cats[$i]}"
             slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$cat")
+            resp_file="/tmp/resp_${i}.txt"
 
+            echo "--------------------------------------------------"
             echo "[$(date -u)] ($((i+1))/${#cats[@]}) calling: $cat (limit=$LIMIT)"
+            echo "URL: ${{ secrets.OND_WEBAPP }}?secret=***&task=$slug&limit=$LIMIT"
 
             http_code=$(
               curl -sS -L --max-redirs 5 --fail-with-body \
-                -o /tmp/resp.txt -w "%{http_code}" \
+                -o "$resp_file" -w "%{http_code}" \
                 "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug&limit=$LIMIT" \
               || echo "000"
             )
 
+            echo "HTTP: $http_code"
+            echo "Response (first 300 chars):"
+            head -c 300 "$resp_file" || true
+            echo ""
+            echo "Response (last 50 lines):"
+            tail -n 50 "$resp_file" || true
+
+            # Mark failures on HTTP errors
             if [[ "$http_code" != "200" ]]; then
               echo "::warning::HTTP $http_code for '$cat'"
-              echo "Response (last 50 lines):"
-              tail -n 50 /tmp/resp.txt || true
               failures=$((failures+1))
+            else
+              # Mark failures on silent body errors (even with HTTP 200)
+              if grep -qiE "error|unauthorized|missing task|unknown task|see executions log|no best-seller asins|no items remain|no fba items remain" "$resp_file"; then
+                echo "::warning::Body indicates failure/empty results for '$cat'"
+                failures=$((failures+1))
+              fi
             fi
 
-            [[ $i -lt $((${#cats[@]}-1)) ]] && sleep "$SLEEP_SECONDS"
+            # sleep between categories except after the last one
+            if [[ $i -lt $((${#cats[@]}-1)) ]]; then
+              echo "Sleeping ${SLEEP_SECONDS}s..."
+              sleep "$SLEEP_SECONDS"
+            fi
           done
 
+          echo "--------------------------------------------------"
           echo "Finished. failures=$failures"
           [[ $failures -eq 0 ]] || exit 1
