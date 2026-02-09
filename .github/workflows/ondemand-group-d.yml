@@ -22,11 +22,11 @@ jobs:
           SLEEP_SECONDS=$((60*60))  # 60 minutes
 
           declare -a cats=(
-            "Office Products"
-            "Pet Supplies"
-            "Sports & Outdoors"
-            "Tools & Home Improvement"
-            "Toys & Games"
+            "Grocery"
+            "Kitchen & Dining"
+            "Kitchen Cookware"
+            "Storage & Organization"
+            "Health Care Products"
           )
 
           failures=0
@@ -60,8 +60,8 @@ jobs:
               echo "::warning::HTTP $http_code for '$cat'"
               failures=$((failures+1))
             else
-              if grep -qiE "error|unauthorized|missing task|unknown task|see executions log|no best-seller asins|no items remain|no fba items remain" "$resp_file"; then
-                echo "::warning::Body indicates failure/empty results for '$cat'"
+              if grep -qiE 'unknown task|unauthorized|missing task param|error' "$resp_file"; then
+                echo "::warning::Body indicates failure for '$cat'"
                 failures=$((failures+1))
               fi
             fi
