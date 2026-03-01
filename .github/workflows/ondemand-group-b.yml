@@ -19,7 +19,7 @@ jobs:
           set -euo pipefail
 
           declare -a cats=(
-            "Home Storage & Organization" "Home Décor"
+            "Home Décor" "Home Storage & Organization"
             "Patio Furniture & Accessories" "Outdoor Décor"
             "Garden Structures & Germination Equipment" "Outdoor Cooking"
             "Sports Fan Shop" "Diet & Nutrition Products"
