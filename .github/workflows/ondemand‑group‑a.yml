@@ -19,7 +19,7 @@ jobs:
           set -euo pipefail
 
           declare -a cats=(
-            "Automotive Care" "Bath & Body" "Hair Care" "Makeup" "Skin Care"
+            "Bath & Body" "Automotive Care" "Hair Care" "Makeup" "Skin Care"
             "Electronics" "Toys & Games" "Tools & Home Improvement"
             "Dog Supplies" "Cat Supplies" "Household Supplies"
             "Vitamins, Minerals & Supplements" "Grocery" "Bath"
