@@ -1,8 +1,8 @@
-name: OnDemand-Group-A
+name: OnDemand-Group-B
 
 on:
   schedule:
-    - cron: '0 4 * * *'   # 04:00 UTC = 00:00 Quebec (EDT)
+    - cron: '10 10 * * *'   # 10:10 UTC = 06:10 Quebec (EDT)
   workflow_dispatch:
 
 concurrency:
@@ -10,22 +10,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  run_cat_group_a:
+  run_cat_group_b:
     runs-on: ubuntu-latest
     steps:
-      - name: Run 17 categories (20 min spacing)
+      - name: Run 15 categories (20 min spacing)
         shell: bash
         run: |
           set -euo pipefail
 
           declare -a cats=(
-            "Automotive Care" "Bath & Body" "Hair Care" "Makeup" "Skin Care"
-            "Electronics" "Toys & Games" "Tools & Home Improvement"
-            "Dog Supplies" "Cat Supplies" "Household Supplies"
-            "Vitamins, Minerals & Supplements" "Grocery" "Bath"
-            "Kitchen & Dining"
-            "Men Fashion"
-            "Women Fashion"
+            "Home Storage & Organization" "Home Décor"
+            "Patio Furniture & Accessories" "Outdoor Décor"
+            "Garden Structures & Germination Equipment" "Outdoor Cooking"
+            "Sports Fan Shop" "Diet & Nutrition Products"
+            "Snacks & Sweets" "Cooking & Baking Supplies"
+            "Health Care Products" "Tableware" "Kitchen Cookware"
+            "Baby" "Sports & Outdoors"
           )
 
           failures=0
