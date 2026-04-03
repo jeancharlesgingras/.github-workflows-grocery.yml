@@ -1,8 +1,8 @@
-name: OnDemand-Group-B
+name: OnDemand-Group-A
 
 on:
   schedule:
-    - cron: '10 10 * * *'  # 10:10 UTC = 06:10 Quebec (EDT)
+    - cron: '0 4 * * *'   # 04:00 UTC = 00:00 Quebec (EDT)
   workflow_dispatch:
 
 concurrency:
@@ -10,22 +10,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  run_cat_group_b:
+  run_cat_group_a:
     runs-on: ubuntu-latest
     steps:
-      - name: Run 16 categories (20 min spacing)
+      - name: Run 17 categories (20 min spacing)
         shell: bash
         run: |
           set -euo pipefail
 
           declare -a cats=(
-            "Home Décor" "Home Storage & Organization"
-            "Patio Furniture & Accessories" "Outdoor Décor"
-            "Garden Structures & Germination Equipment" "Outdoor Cooking"
-            "Sports Fan Shop" "Diet & Nutrition Products"
-            "Snacks & Sweets" "Cooking & Baking Supplies"
-            "Health Care Products" "Tableware" "Kitchen Cookware"
-            "Baby" "Sports & Outdoors"
+            "Automotive Care" "Bath & Body" "Hair Care" "Makeup" "Skin Care"
+            "Electronics" "Toys & Games" "Tools & Home Improvement"
+            "Dog Supplies" "Cat Supplies" "Household Supplies"
+            "Vitamins, Minerals & Supplements" "Grocery" "Bath"
+            "Kitchen & Dining"
+            "Men Fashion"
+            "Women Fashion"
           )
 
           failures=0
@@ -37,7 +37,7 @@ jobs:
 
             echo "[$(date -u)] ($((i+1))/${#cats[@]}) calling: $cat"
 
-            http_code=$(curl -sS --fail-with-body \
+            http_code=$(curl -sS -L --max-redirs 5 --fail-with-body \
               -o /tmp/resp.txt -w "%{http_code}" \
               "${{ secrets.OND_WEBAPP }}?secret=${{ secrets.OND_SECRET }}&task=$slug" \
               || echo "000")
