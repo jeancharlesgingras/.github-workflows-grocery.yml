@@ -19,13 +19,13 @@ jobs:
           set -euo pipefail
 
           declare -a cats=(
-            "Automotive Care" "Bath & Body" "Hair Care" "Makeup" "Skin Care"
+            "Men Fashion" "Bath & Body" "Hair Care" "Makeup" "Skin Care"
             "Electronics" "Toys & Games" "Tools & Home Improvement"
             "Dog Supplies" "Cat Supplies" "Household Supplies"
-            "Vitamins, Minerals & Supplements" "Grocery" "Bath"
+            "Vitamins, Minerals & Supplements" "Women Fashion" "Bath"
             "Kitchen & Dining"
-            "Men Fashion"
-            "Women Fashion"
+            "Automotive Care"
+            "Grocery" 
           )
 
           failures=0
