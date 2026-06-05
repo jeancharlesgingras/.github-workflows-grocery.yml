@@ -2,7 +2,7 @@ name: OnDemand-Group-A
 
 on:
   schedule:
-    - cron: '0 4 * * *'   # 04:00 UTC = 00:00 Quebec (EST)
+    - cron: '0 6 * * *'   # 06:00 UTC = 02:00 Quebec during EDT
   workflow_dispatch:
 
 concurrency:
