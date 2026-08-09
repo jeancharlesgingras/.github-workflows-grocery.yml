@@ -2,7 +2,7 @@ name: OnDemand-Group-C
 
 on:
   schedule:
-    - cron: '0 15 * * *' # 17:00 UTC = 13:00 Eastern (Toronto) during standard time
+    - cron: '0 15 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -12,14 +12,16 @@ concurrency:
 jobs:
   run_cat_group_c:
     runs-on: ubuntu-latest
+    timeout-minutes: 355
+
     steps:
       - name: Run 6 categories (limit=650, 60 min spacing)
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
 
           LIMIT=650
-          SLEEP_SECONDS=$((60*60))  # 60 minutes
+          SLEEP_SECONDS=$((60*60))
 
           declare -a cats=(
             "Tools & Home Improvement"
@@ -36,7 +38,7 @@ jobs:
 
           for i in "${!cats[@]}"; do
             cat="${cats[$i]}"
-            slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$cat")
+            slug=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1], safe=""))' "$cat")
             resp_file="/tmp/resp_${i}.txt"
 
             echo "--------------------------------------------------"
@@ -76,6 +78,3 @@ jobs:
           echo "--------------------------------------------------"
           echo "Finished. failures=$failures"
           [[ $failures -eq 0 ]] || exit 1
-
-
-
